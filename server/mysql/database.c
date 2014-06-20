@@ -10,6 +10,9 @@
 #include "database.h"
 #include "log.h"
 
+// 错误日志缓冲区大小
+#define N 100
+
 // 连接描述
 MYSQL conn;
 MYSQL_RES *res;
@@ -37,7 +40,7 @@ int SMysqlConn()
 	mysql_init(&conn);
 
 	// 连接数据库
-	if (!mysql_real_connect(&conn, "localhost", "root", "passwd", "FTPserver", 0, NULL, 0))	// 填写密码
+	if (!mysql_real_connect(&conn, "localhost", "root", "19921029", "FTPserver", 0, NULL, 0))	// 填写密码
 	{
 		return 0;
 	}
@@ -58,10 +61,11 @@ int SMysqlConn()
 int SRegister(char *user, char *nickname, char *passwd)
 {
 	char add_new[100];
-	char error_info[512];
+	char error_info[N];
+	char sys_info[N];
 	char nowtime[20];
 	
-	SGetTime(nowtime);
+	SGetTime_20(nowtime);
 	memset(add_new, 0, sizeof (add_new));
 	sprintf(add_new, "INSERT INTO UserPasswd(user, nickname, passwd) VALUES('%s', '%s', '%s')", user, nickname, passwd);
 
@@ -71,7 +75,12 @@ int SRegister(char *user, char *nickname, char *passwd)
 		SWriteErrorLog(user, error_info);
 		return 0;
 	}
-	return 1;
+	else
+	{
+		sprintf(sys_info, "%s   %s   Register   %s\n", nowtime, user, "\r\b");
+		SWriteSysLog(user, sys_info);
+		return 1;
+	}
 }
 
 /*************************************************
@@ -84,10 +93,11 @@ int SRegister(char *user, char *nickname, char *passwd)
 int SLogin(char *user, char *passwd)
 {
 	char FindRecord[100];
-	char error_info[512];
+	char error_info[N];
+	char sys_info[N];
 	char nowtime[20];
 	
-	SGetTime(nowtime);
+	SGetTime_20(nowtime);
 	memset(FindRecord, 0, sizeof (FindRecord));
 	sprintf (FindRecord, "SELECT * FROM UserPasswd WHERE user = '%s'", user);
 	if (mysql_query(&conn, FindRecord))
@@ -104,6 +114,8 @@ int SLogin(char *user, char *passwd)
 			{
 				if (strcmp(row[2], passwd) == 0)
 				{
+					sprintf(sys_info, "%s   %s   Login   %s\n", nowtime, user, "\r\b");
+					SWriteSysLog(user, sys_info);
 					printf("Login success!\n");
 					return 1;
 				}
@@ -118,22 +130,62 @@ int SLogin(char *user, char *passwd)
 /*************************************************
      功能：数据库修改用户密码
      参数：user——所要修改用户的用户名
+         ：newpasswd——修改后的密码
    返回值：1、表示修改成功
            0、表示修改失败
 *************************************************/
 int SEditPasswd(char *user, char *newpasswd)
 {
 	char edit[100];
-	char error_info[512];
+	char error_info[N];
+	char sys_info[N];
 	char nowtime[20];
 	
-	SGetTime(nowtime);
+	SGetTime_20(nowtime);
 	memset(edit, 0, sizeof (edit));
 	sprintf(edit, "UPDATE UserPasswd SET passwd = '%s' WHERE user = '%s'", newpasswd, user);
 	if (mysql_query(&conn, edit))
 	{
 		sprintf(error_info, "%s   EditPasswd %d: %s   %s\n", nowtime, mysql_errno(&conn), mysql_error(&conn), "\r\b");
+		SWriteErrorLog(user, error_info);
 		return 0;
+	}
+	else
+	{
+		sprintf(sys_info, "%s   %s   EditPasswd   %s\n", nowtime, user, "\r\b");
+		SWriteSysLog(user, sys_info);
+	}
+
+	return 1;
+}
+
+/*************************************************
+     功能：数据库修改用户昵称
+     参数：user——所要修改用户的用户名
+         ：newnick——修改后的昵称
+   返回值：1、表示修改成功
+           0、表示修改失败
+*************************************************/
+int SEditNickname(char *user, char *newnick)
+{
+	char edit[100];
+	char error_info[N];
+	char sys_info[N];
+	char nowtime[20];
+	
+	SGetTime_20(nowtime);
+	memset(edit, 0, sizeof (edit));
+	sprintf(edit, "UPDATE UserPasswd SET nickname = '%s' WHERE user = '%s'", newnick, user);
+	if (mysql_query(&conn, edit))
+	{
+		sprintf(error_info, "%s   EditNickname %d: %s   %s\n", nowtime, mysql_errno(&conn), mysql_error(&conn), "\r\b");
+		SWriteErrorLog(user, error_info);
+		return 0;
+	}
+	else
+	{
+		sprintf(sys_info, "%s   %s   EditNickname   %s\n", nowtime, user, "\r\b");
+		SWriteSysLog(user, sys_info);
 	}
 
 	return 1;
@@ -164,23 +216,30 @@ void SMysqlClose()
 int SLogout(char *user)
 {
 	char del[100];
-	char error_info[512];
+	char error_info[N];
+	char sys_info[N];
 	char nowtime[20];
 	
-	SGetTime(nowtime);
+	SGetTime_20(nowtime);
 	memset(del, 0, sizeof (del));
 	sprintf(del, "DELETE FROM UserPasswd WHERE user = '%s'", user);
 	if (mysql_query(&conn, del))
 	{
 		sprintf(error_info, "%s   Logout UserPasswd %d: %s   %s\n", nowtime, mysql_errno(&conn), mysql_error(&conn), "\r\b");
+		SWriteErrorLog(user, error_info);
 		return 0;
 	}
 	sprintf(del, "DELETE FROM UserInfo WHERE user = '%s'", user);
 	if (mysql_query(&conn, del))
 	{
 		sprintf(error_info, "%s   Logout UserInfo %d: %s   %s\n", nowtime, mysql_errno(&conn), mysql_error(&conn), "\r\b");
+		SWriteErrorLog(user, error_info);
 		return 0;
 	}
-
-	return 1;
+	else
+	{
+		sprintf(sys_info, "%s   %s   EditPasswd   %s\n", nowtime, user, "\r\b");
+		SWriteSysLog(user, sys_info);
+		return 1;
+	}
 }
