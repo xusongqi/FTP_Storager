@@ -26,8 +26,6 @@ static int conn_status = 0;
 *************************************************/
 int SMysqlConn()
 {
-	int leap;
-
 	// 判断连接情况
 	if (conn_status == 1)
 	{
@@ -102,7 +100,7 @@ int SLogin(char *user, char *passwd)
 		res = mysql_store_result(&conn);
 		if (res)
 		{
-			while (row = mysql_fetch_row(res))
+			while ((row = mysql_fetch_row(res)))
 			{
 				if (strcmp(row[2], passwd) == 0)
 				{
