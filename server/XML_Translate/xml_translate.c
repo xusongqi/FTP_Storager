@@ -7,12 +7,14 @@
 * 
 * Description:  -lxml2
 *
+* tag：	xml_root->name类型为xmlChar，本质上是unsigned char
+*
 */
 
 
 #include "../include/ftp_server.h"
 #include "../include/xml_translate.h"
-
+#include "../include/recv_service.h"
 
 /*———————————————————————————————————————
  * 
@@ -23,7 +25,7 @@
  *—————————————————————————————————————— */
 //void xml_translate(cnt_fd)
 
-int msg_analyse(const char * xml_msg, int msg_len)
+int msg_analyse(int cnt_fd, const char * xml_msg, int msg_len)
 {
 	//char		n = 0;				//子节点计数器
 	xmlDocPtr	xml_fd = NULL;		//xml描述符
@@ -49,14 +51,32 @@ int msg_analyse(const char * xml_msg, int msg_len)
 	}
 
 
-	/* 对信息头（root元素）进行匹配
-	 *
-	 * xml_root->name类型为xmlChar，本质上是unsigned char
+	/* 匹配xml的根结点
+	 *		login
+	 *		signin
+	 *		upload
+	 *		download
 	 * */
 	if( !xmlStrcmp(xml_root->name, BAD_CAST "login") )
-	{
-		//DOTO
-		printf("user: %s\npwd: %s\n", xml_root->xmlChildrenNode->name, xml_root->xmlChildrenNode->next->name);
+	{	//root == "login"
+		printf("login user: %s\nlogin pwd: %s\n", 
+					xmlNodeGetContent(xml_root->xmlChildrenNode), 
+					xmlNodeGetContent(xml_root->xmlChildrenNode->next));
+	}
+	else if( !xmlStrcmp(xml_root->name, BAD_CAST "signin") )
+	{	//root == "signin"
+		//获取用户名和密码
+		printf("signin user: %s\nsignin pwd: %s\n", 
+					xmlNodeGetContent(xml_root->xmlChildrenNode), 
+					xmlNodeGetContent(xml_root->xmlChildrenNode->next));
+	}
+	else if( !xmlStrcmp(xml_root->name, BAD_CAST "upload") )
+	{	//root == "upload"
+		recv_files(cnt_fd);
+	}
+	else if( !xmlStrcmp(xml_root->name, BAD_CAST "download") )
+	{	//root == "download"
+		//send_files();
 	}
 	else
 	{	return ERRX_TAG_NOT_MATCH;}

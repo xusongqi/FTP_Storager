@@ -13,11 +13,45 @@
 
 #include "../include/ftp_server.h" 
 #include "../include/recv_service.h"
+#include "../include/log.h"
+#include "../include/xml_translate.h"
 
 #define	LENGTH		1024
 #define	MAXEVENTS	1024
 
+/*———————————————————————————————————————
+ * 
+ * 函数：recv_files
+ *
+ * 作用：接收文件
+ *
+ * ——————————————————————————————————————*/
+void recv_files(int cnt_fd)
+{
+	char buffer[LENGTH] = {'\0'};
+	int recbytes = 0;
+	FILE * target_fd = NULL;
+
+	target_fd = fopen("NEW_timeInABottle.mp3", "ab+");
+	if(target_fd == NULL)
+	{	perror("../runing/errorlog/syserr.log");}
+
+	//请求client上传文件
+	write(cnt_fd, "READY_RECV_FILE_OK", sizeof("READY_RECV_FILE_OK"));
+
+	while( recbytes = read(cnt_fd, buffer, LENGTH) )
+	{
+		fwrite(buffer, sizeof(unsigned char), recbytes, target_fd);
+		memset(buffer, '\0', LENGTH);
+	}
+
+	fclose(target_fd);
+}
+
+
 /* ——————————————————————————————————————
+ *
+ * 函数：client_request
  *
  * 作用：对客户端请求进行处理
  *
@@ -26,52 +60,51 @@
  * ——————————————————————————————————————*/
 int client_request(int client_fd)
 {
-	int recbytes;//	计数buffer收到的字节数[read()]
-	char buffer[LENGTH];//存储收到的信息[read()]
-	char server_msg[LENGTH];//发送内容长度[write()]
-	struct sockaddr_in client_addr;//客户端地址[包括ip与端口]
+	int recbytes;						//	计数buffer收到的字节数[read()]
+	char buffer[LENGTH],				//存储收到的信息[read()]
+		 xbuffer[LENGTH];			//xml包的内容
+	struct sockaddr_in client_addr;		//客户端地址[包括ip与端口]
 
 	/*获取对端ip与端口信息*/
 	int len=sizeof(client_addr);
 	getpeername( client_fd, (struct sockaddr *)&client_addr,&len );
-	/*read() 收取数据*/
-	FILE * target_fd;
-	target_fd = fopen("timeMusic2.mp3", "ab+");
-	if(target_fd == NULL)
-	{	puts("****************文件未打开！*******************");}
 	
-	while( recbytes = read(client_fd, buffer, LENGTH))
+	/*while*/if( recbytes = read(client_fd, buffer, LENGTH))
 	{
 	/* 当recbytes > 0，正常
 	 * 当recbytes = -1，且errno = 11，正常
 	 * 其他情况：关闭*/
-		if(recbytes > 0)//当然还有[recbytes <0 && errno == EAGAIN]的情况，但不会被epoll_wait()返回到get_act_fds
-		{
-			buffer[recbytes]='\0';
+	//	if(recbytes > 0)//当然还有[recbytes <0 && errno == EAGAIN]的情况，但不会被epoll_wait()返回到get_act_fds
+	//	{
+			//buffer[recbytes]='\0';
+
+			//接收标记，打印到屏幕
 			printf("%s    ",buffer);
 			printf("from %#x : %#x : ",
 					ntohl(client_addr.sin_addr.s_addr),ntohs(client_addr.sin_port));	
 			printf("%s\n",server_time());
-			
-			fwrite(buffer, sizeof(unsigned char), recbytes, target_fd);
-			memset(buffer, '\0', LENGTH);
-			//msg_analyse(buffer, recbytes);	//解析xml函数
-		}
+
+			//sprintf(xbuffer, "%s%s", xbuffer,buffer);
+			strncpy(xbuffer, buffer, sizeof(buffer));
+	//	}
 		/*recbytes <= 0，发生读取错误*/
-		else 
-		{	return -1; }
-	}
-	/*	while读取结束
-	 *	输出断开连接的时间*/
+	//	else 
+	//	{break;/*	return -1;*/ }
+	}//	while读取结束
+	//解析发来的xml包
+	msg_analyse(client_fd, xbuffer, sizeof(xbuffer));	
+
+	 /*	输出断开连接的时间*/
 	printf(" server disconnected from %#x : %#x : ",
 				ntohl(client_addr.sin_addr.s_addr),ntohs(client_addr.sin_port));	
 	printf("%s\n",server_time());
-	fclose(target_fd);
 	close(client_fd);
 	return 0;
 }
 
 /*———————————————————————————————————————
+ *
+ * 函数：server_time
  *
  * 作用：获取当前时间
  *
@@ -95,6 +128,8 @@ int	set_non_blocking(int sockfd)
 }
 
 /*———————————————————————————————————————
+ *
+ * 函数：tcp_server
  *
  * 作用：服务器主函数
  *
