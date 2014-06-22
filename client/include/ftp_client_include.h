@@ -12,6 +12,8 @@
 #ifndef _FTP_CLIENT_INCLUDE_
 #define _FTP_CLIENT_INCLUDE_
 
+#include <errno.h>
+#include <fcntl.h>
 #include <libxml/tree.h>
 #include <libxml/parser.h>
 #include <netinet/in.h>
@@ -21,7 +23,10 @@
 //#include <openssl/md5.h>
 #include <sys/sendfile.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#define LENGTH 1024
 
 #endif
