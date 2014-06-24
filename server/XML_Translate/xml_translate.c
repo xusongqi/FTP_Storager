@@ -15,6 +15,9 @@
 #include "../include/ftp_server.h"
 #include "../include/xml_translate.h"
 #include "../include/recv_service.h"
+#include "../include/log.h"
+#include "../include/database.h"
+#include "../include/server_modules.h"
 
 /*———————————————————————————————————————
  * 
@@ -59,9 +62,20 @@ int msg_analyse(int cnt_fd, const char * xml_msg, int msg_len)
 	 * */
 	if( !xmlStrcmp(xml_root->name, BAD_CAST "login") )
 	{	//root == "login"
-		printf("login user: %s\nlogin pwd: %s\n", 
-					xmlNodeGetContent(xml_root->xmlChildrenNode), 
-					xmlNodeGetContent(xml_root->xmlChildrenNode->next));
+		
+		char * login_user	=	xmlNodeGetContent(xml_root->xmlChildrenNode);
+		char * login_pwd	=	xmlNodeGetContent(xml_root->xmlChildrenNode->next);
+		printf("login user: %s\nlogin pwd: %s\n", login_user, login_pwd);
+					//xmlNodeGetContent(xml_root->xmlChildrenNode), 
+					//xmlNodeGetContent(xml_root->xmlChildrenNode->next));
+		SMysqlConn();//连接登录数据库
+		if( !SLogin(login_user, login_pwd))//启用登录验证
+		{
+			SWriteErrorLog(login_user, "login error");//写入错误日志
+			return LOGIN_FAILED;//返回登录失败
+		}
+		SMysqlClose();//关闭登录数据库
+		return LOGIN_SUCCEED;//返回登录成功
 	}
 	else if( !xmlStrcmp(xml_root->name, BAD_CAST "signin") )
 	{	//root == "signin"
