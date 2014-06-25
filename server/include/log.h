@@ -12,7 +12,13 @@
 // 写文件操作，记录 error 日志
 int SWriteErrorLog(char *user, char *error_info);
 
-// 获取当前系统时间
-void SGetTime(char tmp[]);
+// 写文件操作，记录 sys 日志
+int SWriteSysLog(char *user, char *sys_info);
+
+// 获取当前系统时间（年月日时分秒）(20 指 tmp 长度)
+void SGetTime_20(char tmp[]);
+
+// 获取当前系统日期（年月日）（11 指 tmp 长度）
+void SGetTime_11(char tmp[]);
 
 #endif

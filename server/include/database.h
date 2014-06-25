@@ -21,6 +21,9 @@ int SLogin(char *user, char *passwd);
 // 数据库修改用户密码
 int SEditPasswd(char *user, char *newpasswd);
 
+// 数据库修改用户昵称
+int SEditNickname(char *user, char *newnick);
+
 // 断开数据库
 void SMysqlClose();
 
